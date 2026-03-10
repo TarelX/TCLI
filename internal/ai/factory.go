@@ -41,7 +41,8 @@ func NewClientFromConfig() (Client, error) {
 		if apiKey == "" {
 			return nil, errors.New("未找到 Anthropic API Key，请运行：tcli config set providers.anthropic.api_key sk-ant-xxx")
 		}
-		return NewAnthropicClient(apiKey, model), nil
+		baseURL := viper.GetString("providers.anthropic.base_url")
+		return NewAnthropicClient(apiKey, model, baseURL), nil
 
 	case ProviderCompatible:
 		// 从 compatible 列表中找到名称匹配的条目

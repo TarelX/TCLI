@@ -15,10 +15,14 @@ type AnthropicClient struct {
 }
 
 // NewAnthropicClient 创建 Anthropic 客户端
-func NewAnthropicClient(apiKey, model string) *AnthropicClient {
-	client := anthropic.NewClient(
+func NewAnthropicClient(apiKey, model, baseURL string) *AnthropicClient {
+	opts := []option.RequestOption{
 		option.WithAPIKey(apiKey),
-	)
+	}
+	if baseURL != "" {
+		opts = append(opts, option.WithBaseURL(baseURL))
+	}
+	client := anthropic.NewClient(opts...)
 	return &AnthropicClient{
 		client:    &client,
 		modelName: model,
