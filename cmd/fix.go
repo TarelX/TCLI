@@ -1,6 +1,14 @@
 package cmd
 
 import (
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/TarelX/TCLI/internal/ai"
+	cctx "github.com/TarelX/TCLI/internal/context"
+	"github.com/TarelX/TCLI/internal/prompt"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +29,41 @@ func init() {
 }
 
 func runFix(cmd *cobra.Command, args []string) error {
-	// TODO Phase 3
-	cmd.Println("fix 命令正在开发中（Phase 3）")
-	return nil
+	// 1. 获取错误信息（管道输入 或 --error 参数）
+	errorText, _ := cmd.Flags().GetString("error")
+
+	if errorText == "" && !isatty.IsTerminal(os.Stdin.Fd()) && !isatty.IsCygwinTerminal(os.Stdin.Fd()) {
+		data, err := io.ReadAll(os.Stdin)
+		if err == nil && len(data) > 0 {
+			errorText = string(data)
+		}
+	}
+
+	if errorText == "" {
+		return fmt.Errorf("请提供错误信息，例如：go build 2>&1 | tcli fix")
+	}
+
+	// 2. 读取关联源文件（可选）
+	fileContent := ""
+	filePath, _ := cmd.Flags().GetString("file")
+	if filePath != "" {
+		content, err := cctx.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("读取文件失败：%w", err)
+		}
+		fileContent = content
+	}
+
+	// 3. 组装消息
+	userContent := "## 错误信息\n\n```\n" + errorText + "\n```"
+	if fileContent != "" {
+		userContent += "\n\n## 相关代码\n\n" + fileContent
+	}
+
+	messages := []ai.Message{
+		ai.SystemMessage(prompt.SystemFix),
+		ai.UserMessage(userContent),
+	}
+
+	return runAIAndRender(messages, "🔧 正在分析错误...")
 }
