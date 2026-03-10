@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,14 +12,18 @@ import (
 
 func (m Model) View() tea.View {
 	if m.width == 0 {
-		return tea.NewView("正在初始化...")
+		v := tea.NewView("正在初始化...")
+		v.AltScreen = true
+		return v
 	}
-	return tea.NewView(strings.Join([]string{
+	v := tea.NewView(strings.Join([]string{
 		m.viewTitleBar(),
 		m.viewport.View(),
 		m.viewInputBox(),
 		m.viewStatusBar(),
 	}, "\n"))
+	v.AltScreen = true
+	return v
 }
 
 func (m Model) viewTitleBar() string {
@@ -87,11 +92,68 @@ func (m Model) renderMessages() string {
 	return sb.String()
 }
 
-// startStream 启动流式 AI 请求
+// startStream 启动流式 AI 请求，通过 tea.Cmd 将增量注入 bubbletea 消息循环
 func (m Model) startStream() tea.Cmd {
-	// TODO Phase 2: 实现流式请求
-	// 需要通过 channel 将 StreamDeltaMsg 注入 Bubbletea 消息循环
-	return nil
+	client := m.client
+	messages := make([]ai.Message, len(m.messages))
+	copy(messages, m.messages)
+
+	return func() tea.Msg {
+		// 用 channel 桥接流式回调和 bubbletea 消息循环
+		ch := make(chan tea.Msg, 64)
+
+		go func() {
+			defer close(ch)
+			req := ai.Request{
+				Messages:    messages,
+				MaxTokens:   8192,
+				Temperature: 0.7,
+				Stream:      true,
+			}
+			err := client.Stream(context.Background(), req, func(delta string, done bool, streamErr error) {
+				if streamErr != nil {
+					ch <- StreamErrMsg{Err: streamErr}
+					return
+				}
+				if done {
+					ch <- StreamDoneMsg{}
+					return
+				}
+				if delta != "" {
+					ch <- StreamDeltaMsg{Text: delta}
+				}
+			})
+			if err != nil {
+				ch <- StreamErrMsg{Err: err}
+			}
+		}()
+
+		// 返回第一条消息，后续通过 waitForStream 持续读取
+		msg, ok := <-ch
+		if !ok {
+			return StreamDoneMsg{}
+		}
+		// 把 channel 存下来给后续 waitForStream 使用
+		streamCh = ch
+		return msg
+	}
+}
+
+// streamCh 用于在多次 tea.Cmd 调用之间传递 channel
+// 注意：这是包级变量，单实例安全
+var streamCh chan tea.Msg
+
+// waitForStream 持续从 channel 读取流式消息
+func waitForStream() tea.Msg {
+	if streamCh == nil {
+		return StreamDoneMsg{}
+	}
+	msg, ok := <-streamCh
+	if !ok {
+		streamCh = nil
+		return StreamDoneMsg{}
+	}
+	return msg
 }
 
 func formatNum(n int) string {

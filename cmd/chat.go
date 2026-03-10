@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"github.com/TarelX/TCLI/internal/ai"
+	"github.com/TarelX/TCLI/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -11,16 +13,13 @@ var chatCmd = &cobra.Command{
 支持多行输入、流式响应、Markdown 渲染、Token 用量实时显示。
 
 快捷键：
-  Shift+Enter   换行
   Enter         发送消息
-  ↑ / ↓        翻历史输入
   Ctrl+C        退出
 
 内置命令（输入 / 开头）：
   /clear        清空对话历史
   /copy         复制最后一条回复到剪贴板
-  /model        切换模型
-  /save         保存对话到文件`,
+  /help         查看帮助`,
 	RunE: runChat,
 }
 
@@ -29,9 +28,12 @@ func init() {
 }
 
 func runChat(cmd *cobra.Command, args []string) error {
-	// TODO Phase 2: 启动 TUI
-	// noSplash, _ := cmd.Flags().GetBool("no-splash")
-	// return tui.StartChat(noSplash)
-	cmd.Println("chat 命令正在开发中（Phase 2）")
-	return nil
+	// 创建 AI 客户端
+	client, err := ai.NewClientFromConfig()
+	if err != nil {
+		return err
+	}
+
+	noSplash, _ := cmd.Flags().GetBool("no-splash")
+	return tui.StartChat(client, appVersion, !noSplash)
 }
