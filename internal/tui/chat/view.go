@@ -16,12 +16,16 @@ func (m Model) View() tea.View {
 		v.AltScreen = true
 		return v
 	}
-	v := tea.NewView(strings.Join([]string{
+	parts := []string{
 		m.viewTitleBar(),
 		m.viewport.View(),
-		m.viewInputBox(),
-		m.viewStatusBar(),
-	}, "\n"))
+	}
+	// 补全候选列表显示在输入框上方
+	if len(m.completions) > 0 {
+		parts = append(parts, m.viewCompletions())
+	}
+	parts = append(parts, m.viewInputBox(), m.viewStatusBar())
+	v := tea.NewView(strings.Join(parts, "\n"))
 	v.AltScreen = true
 	return v
 }
@@ -36,6 +40,35 @@ func (m Model) viewTitleBar() string {
 		provider = " TCli "
 	}
 	return m.theme.TitleBar.Width(m.width).Render(provider)
+}
+
+func (m Model) viewCompletions() string {
+	var sb strings.Builder
+	modeLabel := "文件"
+	if m.completionMode == "cmd" {
+		modeLabel = "命令"
+	}
+	sb.WriteString(m.theme.Dim.Render(fmt.Sprintf("  %s补全 (Tab 选择, ↑↓ 切换, Esc 关闭):", modeLabel)))
+	sb.WriteString("\n")
+	maxShow := 6
+	if len(m.completions) < maxShow {
+		maxShow = len(m.completions)
+	}
+	for i := 0; i < maxShow; i++ {
+		item := m.completions[i]
+		if i == m.completionIdx {
+			sb.WriteString(m.theme.Success.Render(fmt.Sprintf("  ▸ %s", item)))
+		} else {
+			sb.WriteString(m.theme.Dim.Render(fmt.Sprintf("    %s", item)))
+		}
+		if i < maxShow-1 {
+			sb.WriteString("\n")
+		}
+	}
+	if len(m.completions) > maxShow {
+		sb.WriteString(m.theme.Dim.Render(fmt.Sprintf("\n    ...还有 %d 项", len(m.completions)-maxShow)))
+	}
+	return sb.String()
 }
 
 func (m Model) viewInputBox() string {

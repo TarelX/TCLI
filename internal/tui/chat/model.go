@@ -39,6 +39,11 @@ type Model struct {
 	projectType string // 项目类型，用于欢迎面板
 	gitBranch   string // Git分支，用于欢迎面板
 	workDir     string // 工作目录，用于欢迎面板
+
+	// 自动补全状态
+	completions    []string // 当前候选列表
+	completionIdx  int      // 当前选中的候选索引
+	completionMode string   // 补全模式："" | "file" | "cmd"
 }
 
 // New 创建 chat Model

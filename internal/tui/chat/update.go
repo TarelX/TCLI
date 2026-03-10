@@ -30,8 +30,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
+		case "tab":
+			// Tab 补全：将选中的候选项插入输入框
+			if len(m.completions) > 0 {
+				m.applyCompletion()
+				return m, nil
+			}
+		case "up":
+			// 补全模式下上箭头切换候选
+			if len(m.completions) > 0 {
+				m.completionIdx--
+				if m.completionIdx < 0 {
+					m.completionIdx = len(m.completions) - 1
+				}
+				return m, nil
+			}
+		case "down":
+			// 补全模式下下箭头切换候选
+			if len(m.completions) > 0 {
+				m.completionIdx = (m.completionIdx + 1) % len(m.completions)
+				return m, nil
+			}
+		case "esc":
+			// Esc 关闭补全
+			if len(m.completions) > 0 {
+				m.completions = nil
+				m.completionMode = ""
+				return m, nil
+			}
 		case "enter":
 			if !m.streaming {
+				m.completions = nil
+				m.completionMode = ""
 				return m.handleSubmit()
 			}
 		}
@@ -79,6 +109,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner, spCmd = m.spinner.Update(msg)
 		cmds = append(cmds, spCmd)
 	}
+
+	// 输入变化时更新自动补全
+	m.updateCompletions()
 
 	return m, tea.Batch(cmds...)
 }
