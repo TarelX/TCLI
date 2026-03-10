@@ -44,6 +44,7 @@ type Model struct {
 	completions    []string // 当前候选列表
 	completionIdx  int      // 当前选中的候选索引
 	completionMode string   // 补全模式："" | "file" | "cmd"
+	lastInput      string   // 上一次输入内容，用于检测变化
 }
 
 // New 创建 chat Model

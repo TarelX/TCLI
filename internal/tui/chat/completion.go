@@ -10,8 +10,15 @@ import (
 var slashCommands = []string{"/clear", "/copy", "/help"}
 
 // updateCompletions 根据当前输入内容更新候选列表
+// 只在输入内容实际变化时才重新计算，避免每次 tick 都重置 completionIdx
 func (m *Model) updateCompletions() {
 	text := m.input.Value()
+
+	// 输入没变化，不重算（保护 completionIdx 不被重置）
+	if text == m.lastInput {
+		return
+	}
+	m.lastInput = text
 
 	// 检测 / 命令补全（仅当输入以 / 开头且只有一个词时）
 	if strings.HasPrefix(text, "/") && !strings.Contains(text, " ") {
@@ -25,9 +32,7 @@ func (m *Model) updateCompletions() {
 		if len(matches) > 0 && text != matches[0] {
 			m.completions = matches
 			m.completionMode = "cmd"
-			if m.completionIdx >= len(matches) {
-				m.completionIdx = 0
-			}
+			m.completionIdx = 0
 			return
 		}
 	}
@@ -37,20 +42,8 @@ func (m *Model) updateCompletions() {
 	if atIdx >= 0 {
 		afterAt := text[atIdx+1:]
 		// 只在 @ 后没有空格时触发（说明用户还在输入文件名）
-		if !strings.Contains(afterAt, " ") && afterAt != "" {
+		if !strings.Contains(afterAt, " ") {
 			matches := matchFiles(afterAt, 8)
-			if len(matches) > 0 {
-				m.completions = matches
-				m.completionMode = "file"
-				if m.completionIdx >= len(matches) {
-					m.completionIdx = 0
-				}
-				return
-			}
-		}
-		// @ 后面为空，显示当前目录的文件列表
-		if afterAt == "" {
-			matches := matchFiles("", 8)
 			if len(matches) > 0 {
 				m.completions = matches
 				m.completionMode = "file"
@@ -63,6 +56,7 @@ func (m *Model) updateCompletions() {
 	// 没有匹配，清除补全状态
 	m.completions = nil
 	m.completionMode = ""
+	m.completionIdx = 0
 }
 
 // applyCompletion 将当前选中的候选项插入输入框
