@@ -67,11 +67,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+	case StreamStartedMsg:
+		// 流式请求已启动，开始从channel读取 + spinner转动
+		m.refreshViewport()
+		return m, tea.Batch(waitForStream, m.spinner.Tick)
+
 	case StreamDeltaMsg:
 		m.streamBuf.WriteString(msg.Text)
 		m.refreshViewport()
-		// 继续读取下一条流式消息
-		return m, waitForStream
+		// 继续读取下一条流式消息 + 保持spinner转动
+		return m, tea.Batch(waitForStream, m.spinner.Tick)
 
 	case StreamDoneMsg:
 		m.streaming = false

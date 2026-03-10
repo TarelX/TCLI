@@ -273,55 +273,50 @@ func (m Model) renderWelcomePanel() string {
 	return "\n" + panel + "\n"
 }
 
-// startStream 启动流式 AI 请求，通过 tea.Cmd 将增量注入 bubbletea 消息循环
+// StreamStartedMsg 表示流式请求已启动（非阻塞），可以开始读取
+type StreamStartedMsg struct{}
+
+// startStream 启动流式 AI 请求（非阻塞），立即返回让 spinner 能转动
 func (m Model) startStream() tea.Cmd {
 	client := m.client
 	messages := make([]ai.Message, len(m.messages))
 	copy(messages, m.messages)
 
-	return func() tea.Msg {
-		// 用 channel 桥接流式回调和 bubbletea 消息循环
-		ch := make(chan tea.Msg, 64)
+	// 创建 channel 并启动 goroutine（不阻塞）
+	ch := make(chan tea.Msg, 64)
+	streamCh = ch
 
-		go func() {
-			defer close(ch)
-			req := ai.Request{
-				Messages:    messages,
-				MaxTokens:   8192,
-				Temperature: 0.7,
-				Stream:      true,
-			}
-			err := client.Stream(context.Background(), req, func(delta string, done bool, streamErr error) {
-				if streamErr != nil {
-					ch <- StreamErrMsg{Err: streamErr}
-					return
-				}
-				if done {
-					ch <- StreamDoneMsg{}
-					return
-				}
-				if delta != "" {
-					ch <- StreamDeltaMsg{Text: delta}
-				}
-			})
-			if err != nil {
-				ch <- StreamErrMsg{Err: err}
-			}
-		}()
-
-		// 返回第一条消息，后续通过 waitForStream 持续读取
-		msg, ok := <-ch
-		if !ok {
-			return StreamDoneMsg{}
+	go func() {
+		defer close(ch)
+		req := ai.Request{
+			Messages:    messages,
+			MaxTokens:   8192,
+			Temperature: 0.7,
+			Stream:      true,
 		}
-		// 把 channel 存下来给后续 waitForStream 使用
-		streamCh = ch
-		return msg
-	}
+		err := client.Stream(context.Background(), req, func(delta string, done bool, streamErr error) {
+			if streamErr != nil {
+				ch <- StreamErrMsg{Err: streamErr}
+				return
+			}
+			if done {
+				ch <- StreamDoneMsg{}
+				return
+			}
+			if delta != "" {
+				ch <- StreamDeltaMsg{Text: delta}
+			}
+		})
+		if err != nil {
+			ch <- StreamErrMsg{Err: err}
+		}
+	}()
+
+	// 立即返回 StreamStartedMsg，不阻塞等待第一条消息
+	return func() tea.Msg { return StreamStartedMsg{} }
 }
 
 // streamCh 用于在多次 tea.Cmd 调用之间传递 channel
-// 注意：这是包级变量，单实例安全
 var streamCh chan tea.Msg
 
 // waitForStream 持续从 channel 读取流式消息
