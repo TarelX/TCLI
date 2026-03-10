@@ -1,0 +1,75 @@
+version: 2
+
+project_name: tcli
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: tcli
+    main: .
+    binary: tcli
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.buildDate={{.Date}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "tcli_{{.Version}}_{{.Os}}_{{.Arch}}"
+    files:
+      - README.md
+      - 开发方案.md
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{.Tag}}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  draft: false
+  prerelease: auto
+  name_template: "TCli {{.Version}}"
+
+# Homebrew tap（Mac 用户一键安装）
+brews:
+  - name: tcli
+    homepage: "https://github.com/TarelX/TCLI"
+    description: "AI 驱动的代码 CLI 工具，面向中文开发者"
+    license: "MIT"
+    repository:
+      owner: TarelX
+      name: homebrew-tap
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    install: |
+      bin.install "tcli"
+    test: |
+      system "#{bin}/tcli version"

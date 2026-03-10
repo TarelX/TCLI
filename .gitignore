@@ -1,0 +1,27 @@
+# 编译产物
+/tcli
+/tcli.exe
+/dist/
+
+# Go 工具链
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 本地配置（包含 API Key，不提交）
+.tcli/
+
+# goreleaser
+.goreleaser.yaml.bak
+
+# 测试覆盖率
+coverage.out
+coverage.html
+
+# 操作系统
+.DS_Store
+Thumbs.db
