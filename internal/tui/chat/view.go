@@ -109,11 +109,33 @@ func (m Model) renderMessages() string {
 	return sb.String()
 }
 
-// renderWelcomePanel 渲染 Claude Code 风格的持久欢迎面板
+// logoLines 是 TCLi 的方块风格 ASCII Art，分行存储用于逐行渐变着色
+var logoLines = []string{
+	` ████████╗  ██████╗ ██╗      ██╗`,
+	` ╚══██╔══╝ ██╔════╝ ██║      ██║`,
+	`    ██║    ██║      ██║      ██║`,
+	`    ██║    ██║      ██║      ██║`,
+	`    ██║    ╚██████╗ ███████╗ ██║`,
+	`    ╚═╝     ╚═════╝ ╚══════╝ ╚═╝`,
+}
+
+// renderWelcomePanel 渲染带渐变Logo的持久欢迎面板
 func (m Model) renderWelcomePanel() string {
 	w := m.width - 4
 	if w < 40 {
 		w = 40
+	}
+
+	// 渲染渐变 Logo（紫→蓝→青）
+	grad := m.theme.GradientColors
+	var logoRendered strings.Builder
+	for i, line := range logoLines {
+		idx := (i * (len(grad) - 1)) / max(len(logoLines)-1, 1)
+		colored := lipgloss.NewStyle().
+			Foreground(grad[idx]).
+			Bold(true).
+			Render(line)
+		logoRendered.WriteString(colored + "\n")
 	}
 
 	// 模型名称
@@ -180,6 +202,14 @@ func (m Model) renderWelcomePanel() string {
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, leftBox, rightBox)
 
+	// 居中Logo
+	logoCenter := lipgloss.NewStyle().Width(w).Align(lipgloss.Center).Render(logoRendered.String())
+
+	// 版本号（Logo下方居中）
+	versionLine := lipgloss.NewStyle().Width(w).Align(lipgloss.Center).Render(
+		m.theme.Dim.Render(fmt.Sprintf("TCli %s", m.version)),
+	)
+
 	// 外层边框
 	panel := lipgloss.NewStyle().
 		Width(w).
@@ -187,7 +217,7 @@ func (m Model) renderWelcomePanel() string {
 		BorderForeground(lipgloss.Color("#BF5AF2")).
 		Padding(1, 2).
 		Render(
-			m.theme.Dim.Render(fmt.Sprintf("TCli %s", m.version)) + "\n\n" + body,
+			logoCenter + "\n" + versionLine + "\n\n" + body,
 		)
 
 	return "\n" + panel + "\n"

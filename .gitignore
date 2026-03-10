@@ -1,6 +1,8 @@
 # 编译产物
 /tcli
 /tcli.exe
+tcli.exe~
+*.exe~
 /dist/
 
 # Go 工具链
