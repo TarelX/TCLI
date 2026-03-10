@@ -72,7 +72,7 @@ func (m Model) tokenStyle() lipgloss.Style {
 func (m Model) renderMessages() string {
 	var sb strings.Builder
 
-	// 空消息时显示欢迎提示
+	// 检查是否有用户可见的消息
 	hasVisible := false
 	for _, msg := range m.messages {
 		if msg.Role != ai.RoleSystem {
@@ -80,19 +80,16 @@ func (m Model) renderMessages() string {
 			break
 		}
 	}
-	if !hasVisible && !m.streaming {
-		welcome := m.theme.Dim.Render(`  欢迎使用 TCli 交互模式！
 
-  直接输入消息开始对话。
-  输入 /help 查看可用命令。`)
-		sb.WriteString("\n" + welcome + "\n")
+	// 没有可见消息时显示 Claude Code 风格的欢迎面板
+	if !hasVisible && !m.streaming {
+		sb.WriteString(m.renderWelcomePanel())
 		return sb.String()
 	}
 
 	for _, msg := range m.messages {
 		switch msg.Role {
 		case ai.RoleSystem:
-			// 不显示 system prompt
 			continue
 		case ai.RoleUser:
 			sb.WriteString(m.theme.UserMessage.Render("[你] "))
@@ -110,6 +107,90 @@ func (m Model) renderMessages() string {
 		sb.WriteString(m.spinner.View())
 	}
 	return sb.String()
+}
+
+// renderWelcomePanel 渲染 Claude Code 风格的持久欢迎面板
+func (m Model) renderWelcomePanel() string {
+	w := m.width - 4
+	if w < 40 {
+		w = 40
+	}
+
+	// 模型名称
+	modelName := "未配置"
+	providerName := ""
+	if m.client != nil {
+		modelName = m.client.ModelName()
+		providerName = string(m.client.Provider())
+	}
+
+	// 构建左侧信息栏
+	var left strings.Builder
+	left.WriteString(m.theme.Bold.Render("Welcome!"))
+	left.WriteString("\n\n")
+	left.WriteString(fmt.Sprintf("  🤖 模型: %s", m.theme.Bold.Render(modelName)))
+	if providerName != "" {
+		left.WriteString(m.theme.Dim.Render(" · " + providerName))
+	}
+	left.WriteString("\n")
+	if m.projectType != "" {
+		left.WriteString(fmt.Sprintf("  📁 项目: %s", m.theme.Bold.Render(m.projectType)))
+		left.WriteString("\n")
+	}
+	if m.gitBranch != "" {
+		left.WriteString(fmt.Sprintf("  🌿 分支: %s", m.theme.Bold.Render(m.gitBranch)))
+		left.WriteString("\n")
+	}
+	if m.workDir != "" {
+		left.WriteString(fmt.Sprintf("  📂 目录: %s", m.theme.Dim.Render(m.workDir)))
+		left.WriteString("\n")
+	}
+
+	// 构建右侧提示栏
+	var right strings.Builder
+	right.WriteString(m.theme.Success.Render("Tips"))
+	right.WriteString("\n")
+	right.WriteString("  直接输入问题开始对话\n")
+	right.WriteString("  支持多轮连续对话\n")
+	right.WriteString("  AI 会记住上下文\n")
+	right.WriteString("\n")
+	right.WriteString(m.theme.Success.Render("可用命令"))
+	right.WriteString("\n")
+	right.WriteString("  /clear  清空对话历史\n")
+	right.WriteString("  /copy   复制最后回复\n")
+	right.WriteString("  /help   查看帮助\n")
+
+	// 用边框包裹
+	leftContent := left.String()
+	rightContent := right.String()
+
+	halfW := w/2 - 2
+	if halfW < 20 {
+		halfW = 20
+	}
+
+	leftBox := lipgloss.NewStyle().Width(halfW).Render(leftContent)
+	rightBox := lipgloss.NewStyle().
+		Width(halfW).
+		BorderLeft(true).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("#4A4A8A")).
+		PaddingLeft(2).
+		Render(rightContent)
+
+	body := lipgloss.JoinHorizontal(lipgloss.Top, leftBox, rightBox)
+
+	// 外层边框
+	panel := lipgloss.NewStyle().
+		Width(w).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#BF5AF2")).
+		Padding(1, 2).
+		Render(
+			m.theme.Dim.Render(fmt.Sprintf("TCli %s", m.version)) + "\n\n" + body,
+		)
+
+	return "\n" + panel + "\n"
 }
 
 // startStream 启动流式 AI 请求，通过 tea.Cmd 将增量注入 bubbletea 消息循环

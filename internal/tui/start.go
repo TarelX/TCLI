@@ -7,8 +7,8 @@ import (
 
 // StartChat 启动交互式 Chat TUI
 // showSplash: 是否显示启动动画
-func StartChat(client ai.Client, version string, showSplash bool) error {
-	model := NewRootModel(client, version, showSplash)
+func StartChat(client ai.Client, version string) error {
+	model := NewRootModel(client, version)
 	p := tea.NewProgram(model)
 	_, err := p.Run()
 	return err

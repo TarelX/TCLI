@@ -22,23 +22,27 @@ type StreamErrMsg struct{ Err error }
 
 // Model 是 chat 界面的 Bubbletea Model
 type Model struct {
-	messages  []ai.Message
-	input     textarea.Model
-	viewport  viewport.Model
-	spinner   spinner.Model
-	streaming bool
-	streamBuf strings.Builder
-	tokenUsed int
-	tokenMax  int
-	width     int
-	height    int
-	client    ai.Client
-	theme     styles.Theme
-	err       error
+	messages    []ai.Message
+	input       textarea.Model
+	viewport    viewport.Model
+	spinner     spinner.Model
+	streaming   bool
+	streamBuf   strings.Builder
+	tokenUsed   int
+	tokenMax    int
+	width       int
+	height      int
+	client      ai.Client
+	theme       styles.Theme
+	err         error
+	version     string // 版本号，用于欢迎面板
+	projectType string // 项目类型，用于欢迎面板
+	gitBranch   string // Git分支，用于欢迎面板
+	workDir     string // 工作目录，用于欢迎面板
 }
 
 // New 创建 chat Model
-func New(client ai.Client, tokenMax int) Model {
+func New(client ai.Client, tokenMax int, version, projectType, gitBranch, workDir string) Model {
 	ta := textarea.New()
 	ta.Placeholder = "输入消息... (Enter 发送，Shift+Enter 换行，/help 查看命令)"
 	ta.Focus()
@@ -51,12 +55,16 @@ func New(client ai.Client, tokenMax int) Model {
 	vp := viewport.New()
 
 	return Model{
-		input:    ta,
-		viewport: vp,
-		spinner:  sp,
-		tokenMax: tokenMax,
-		client:   client,
-		theme:    styles.Default(),
+		input:       ta,
+		viewport:    vp,
+		spinner:     sp,
+		tokenMax:    tokenMax,
+		client:      client,
+		theme:       styles.Default(),
+		version:     version,
+		projectType: projectType,
+		gitBranch:   gitBranch,
+		workDir:     workDir,
 	}
 }
 

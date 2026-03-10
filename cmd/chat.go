@@ -34,6 +34,5 @@ func runChat(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	noSplash, _ := cmd.Flags().GetBool("no-splash")
-	return tui.StartChat(client, appVersion, !noSplash)
+	return tui.StartChat(client, appVersion)
 }

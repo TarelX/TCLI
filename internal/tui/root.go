@@ -1,40 +1,45 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
+
 	tea "charm.land/bubbletea/v2"
 	"github.com/TarelX/TCLI/internal/ai"
+	cctx "github.com/TarelX/TCLI/internal/context"
+	"github.com/TarelX/TCLI/internal/token"
 	"github.com/TarelX/TCLI/internal/tui/chat"
-	"github.com/TarelX/TCLI/internal/tui/splash"
 )
 
-// RootModel 顶层 Model，负责管理 splash → 主界面的切换
+// RootModel 顶层 Model，直接使用 chat（欢迎面板内置在 chat 中）
 type RootModel struct {
-	splash     splash.Model
-	chat       chat.Model
-	showSplash bool
-	width      int
-	height     int
+	chat   chat.Model
+	width  int
+	height int
 }
 
-// NewRootModel 创建根 Model
-func NewRootModel(client ai.Client, version string, showSplash bool) RootModel {
-	modelName := ""
+// NewRootModel 创建根 Model，收集项目信息传给 chat 用于欢迎面板
+func NewRootModel(client ai.Client, version string) RootModel {
 	tokenMax := 128000
 	if client != nil {
-		modelName = client.ModelName()
+		tokenMax = token.LimitForModel(client.ModelName())
+	}
+
+	// 收集项目信息
+	gitInfo := cctx.CollectGitInfo()
+	projectType := cctx.Collect(0).ProjectType
+
+	workDir := ""
+	if wd, err := os.Getwd(); err == nil {
+		workDir = filepath.Base(wd)
 	}
 
 	return RootModel{
-		splash:     splash.New(80, version, modelName),
-		chat:       chat.New(client, tokenMax),
-		showSplash: showSplash,
+		chat: chat.New(client, tokenMax, version, projectType, gitInfo.Branch, workDir),
 	}
 }
 
 func (m RootModel) Init() tea.Cmd {
-	if m.showSplash {
-		return m.splash.Init()
-	}
 	return m.chat.Init()
 }
 
@@ -45,26 +50,11 @@ func (m RootModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 	}
 
-	if m.showSplash {
-		newSplash, cmd := m.splash.Update(msg)
-		m.splash = newSplash.(splash.Model)
-
-		// 动画结束，切换到 chat 界面
-		if _, ok := msg.(splash.DoneMsg); ok {
-			m.showSplash = false
-			return m, m.chat.Init()
-		}
-		return m, cmd
-	}
-
 	newChat, cmd := m.chat.Update(msg)
 	m.chat = newChat.(chat.Model)
 	return m, cmd
 }
 
 func (m RootModel) View() tea.View {
-	if m.showSplash {
-		return m.splash.View()
-	}
 	return m.chat.View()
 }
