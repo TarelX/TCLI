@@ -71,14 +71,34 @@ func (m Model) tokenStyle() lipgloss.Style {
 
 func (m Model) renderMessages() string {
 	var sb strings.Builder
+
+	// 空消息时显示欢迎提示
+	hasVisible := false
+	for _, msg := range m.messages {
+		if msg.Role != ai.RoleSystem {
+			hasVisible = true
+			break
+		}
+	}
+	if !hasVisible && !m.streaming {
+		welcome := m.theme.Dim.Render(`  欢迎使用 TCli 交互模式！
+
+  直接输入消息开始对话。
+  输入 /help 查看可用命令。`)
+		sb.WriteString("\n" + welcome + "\n")
+		return sb.String()
+	}
+
 	for _, msg := range m.messages {
 		switch msg.Role {
+		case ai.RoleSystem:
+			// 不显示 system prompt
+			continue
 		case ai.RoleUser:
 			sb.WriteString(m.theme.UserMessage.Render("[你] "))
 			sb.WriteString(msg.Content)
 		case ai.RoleAssistant:
 			sb.WriteString(m.theme.AIMessage.Render("[AI] "))
-			// TODO Phase 2: 用 glamour 渲染 Markdown
 			sb.WriteString(msg.Content)
 		}
 		sb.WriteString("\n\n")

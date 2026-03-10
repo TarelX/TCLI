@@ -104,7 +104,7 @@ func (m Model) handleSubmit() (Model, tea.Cmd) {
 	m.tokenUsed = token.EstimateMessages(m.messages)
 	m.refreshViewport()
 
-	return m, m.startStream()
+	return m, tea.Batch(m.startStream(), m.spinner.Tick)
 }
 
 func (m Model) handleSlashCommand(input string) (Model, tea.Cmd) {

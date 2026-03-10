@@ -113,7 +113,9 @@ func (m Model) View() tea.View {
 			Foreground(m.theme.GradientColors[0]).
 			Bold(true).
 			Render(typed)
-		return tea.NewView("\n\n\n" + center.Render(styled) + "\n")
+		v := tea.NewView("\n\n\n" + center.Render(styled) + "\n")
+		v.AltScreen = true
+		return v
 
 	case phaseLogo, phaseInfo:
 		logo := logoFull
@@ -147,7 +149,11 @@ func (m Model) View() tea.View {
 				dotsStyled
 			result += "\n" + center.Render(info)
 		}
-		return tea.NewView(result)
+		v := tea.NewView(result)
+		v.AltScreen = true
+		return v
 	}
-	return tea.NewView("")
+	v := tea.NewView("")
+	v.AltScreen = true
+	return v
 }
