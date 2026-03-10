@@ -27,7 +27,7 @@ type Model struct {
 	viewport    viewport.Model
 	spinner     spinner.Model
 	streaming   bool
-	streamBuf   strings.Builder
+	streamBuf   *strings.Builder
 	tokenUsed   int
 	tokenMax    int
 	width       int
@@ -64,6 +64,7 @@ func New(client ai.Client, tokenMax int, version, projectType, gitBranch, workDi
 		input:       ta,
 		viewport:    vp,
 		spinner:     sp,
+		streamBuf:   &strings.Builder{},
 		tokenMax:    tokenMax,
 		client:      client,
 		theme:       styles.Default(),
