@@ -23,7 +23,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.input.SetWidth(msg.Width - 2)
 		m.viewport.SetWidth(msg.Width)
-		m.viewport.SetHeight(msg.Height - 7) // 减去标题栏、输入框、状态栏高度
+		m.recalcViewportHeight()
 		m.refreshViewport()
 
 	case tea.KeyMsg:
@@ -188,7 +188,27 @@ func (m Model) handleSlashCommand(input string) (Model, tea.Cmd) {
 	return m, nil
 }
 
+// recalcViewportHeight 动态计算viewport高度，考虑补全列表占用的行数
+func (m *Model) recalcViewportHeight() {
+	// 基础占用：标题栏(1) + 输入框边框(2) + 输入内容(3) + 状态栏(1) = 7
+	used := 7
+	// 补全列表占用的行数
+	if len(m.completions) > 0 {
+		lines := len(m.completions)
+		if lines > 6 {
+			lines = 7 // 6项 + "还有N项"
+		}
+		used += lines + 1 // +1 是标题行
+	}
+	h := m.height - used
+	if h < 3 {
+		h = 3
+	}
+	m.viewport.SetHeight(h)
+}
+
 func (m *Model) refreshViewport() {
+	m.recalcViewportHeight()
 	m.viewport.SetContent(m.renderMessages())
 	m.viewport.GotoBottom()
 }
