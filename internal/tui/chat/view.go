@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -145,15 +146,18 @@ func (m Model) renderMessages() string {
 	}
 	// 流式响应中的临时内容 或 思考中动画
 	if m.streaming {
+		elapsed := time.Since(m.streamStart).Truncate(100 * time.Millisecond)
+		elapsedStr := m.theme.Dim.Render(fmt.Sprintf(" %.1fs", elapsed.Seconds()))
+
 		if m.streamBuf.Len() > 0 {
 			label := m.theme.AIMessage.Render("● ")
 			content := lipgloss.NewStyle().Width(contentW).Render(m.streamBuf.String())
 			sb.WriteString(label + content)
-			sb.WriteString(m.spinner.View())
+			sb.WriteString(m.spinner.View() + elapsedStr)
 		} else {
-			// 还没收到任何内容，显示思考中动画
+			// 还没收到任何内容，显示思考中动画 + 实时计时
 			thinking := m.theme.TokenWarning.Render("✦ Thinking...")
-			sb.WriteString(thinking + " " + m.spinner.View())
+			sb.WriteString(thinking + " " + m.spinner.View() + elapsedStr)
 		}
 	}
 	return sb.String()

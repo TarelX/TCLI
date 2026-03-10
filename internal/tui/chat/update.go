@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/TarelX/TCLI/internal/ai"
@@ -147,6 +148,7 @@ func (m Model) handleSubmit() (Model, tea.Cmd) {
 	m.messages = append(m.messages, ai.UserMessage(text))
 	m.input.Reset()
 	m.streaming = true
+	m.streamStart = time.Now()
 	m.tokenUsed = token.EstimateMessages(m.messages)
 	m.refreshViewport()
 

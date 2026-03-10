@@ -2,6 +2,7 @@ package chat
 
 import (
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textarea"
@@ -27,6 +28,7 @@ type Model struct {
 	viewport    viewport.Model
 	spinner     spinner.Model
 	streaming   bool
+	streamStart time.Time // 流式请求开始时间，用于显示思考耗时
 	streamBuf   *strings.Builder
 	tokenUsed   int
 	tokenMax    int
