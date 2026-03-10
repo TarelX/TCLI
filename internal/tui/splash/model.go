@@ -75,7 +75,10 @@ func tick(d time.Duration) tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		return m, nil
 	case tickMsg:
 		switch m.phase {
 		case phaseTyping:
