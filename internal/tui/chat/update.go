@@ -114,6 +114,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.streaming {
 		m.spinner, spCmd = m.spinner.Update(msg)
 		cmds = append(cmds, spCmd)
+		// 每次spinner tick都刷新viewport，让动画帧更新到渲染内容中
+		m.refreshViewport()
 	}
 
 	// 输入变化时更新自动补全
