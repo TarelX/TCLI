@@ -50,10 +50,12 @@ type Model struct {
 // New 创建 chat Model
 func New(client ai.Client, tokenMax int, version, projectType, gitBranch, workDir string) Model {
 	ta := textarea.New()
-	ta.Placeholder = "输入消息... (Enter 发送，Shift+Enter 换行，/help 查看命令)"
+	ta.Placeholder = "输入消息... (Enter 发送, /help 查看命令)"
 	ta.Focus()
 	ta.SetHeight(3)
 	ta.CharLimit = 0
+	ta.ShowLineNumbers = false
+	ta.Prompt = "❯ "
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
