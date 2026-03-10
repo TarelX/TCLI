@@ -3,11 +3,13 @@ package chat
 import (
 	"fmt"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/TarelX/TCLI/internal/ai"
+	cctx "github.com/TarelX/TCLI/internal/context"
 	"github.com/TarelX/TCLI/internal/prompt"
 	"github.com/TarelX/TCLI/internal/token"
 )
@@ -97,6 +99,9 @@ func (m Model) handleSubmit() (Model, tea.Cmd) {
 		m.messages = append(m.messages, ai.SystemMessage(prompt.SystemBase))
 	}
 
+	// 解析 @file 引用，将文件内容注入消息
+	text = m.expandFileRefs(text)
+
 	// 普通消息
 	m.messages = append(m.messages, ai.UserMessage(text))
 	m.input.Reset()
@@ -153,6 +158,36 @@ func (m Model) handleSlashCommand(input string) (Model, tea.Cmd) {
 func (m *Model) refreshViewport() {
 	m.viewport.SetContent(m.renderMessages())
 	m.viewport.GotoBottom()
+}
+
+// expandFileRefs 解析消息中的 @文件路径 引用，将文件内容注入消息
+// 支持格式：@main.go  @./src/utils.go  @internal/ai/client.go
+func (m Model) expandFileRefs(text string) string {
+	// 用正则匹配 @filepath 模式
+	re := regexp.MustCompile(`@([\w./\\-]+\.\w+)`)
+	matches := re.FindAllStringSubmatch(text, -1)
+	if len(matches) == 0 {
+		return text
+	}
+
+	var fileContents strings.Builder
+	loadedFiles := 0
+	for _, match := range matches {
+		filePath := match[1]
+		content, err := cctx.ReadFile(filePath)
+		if err != nil {
+			continue
+		}
+		fileContents.WriteString(fmt.Sprintf("\n\n## 文件：%s\n\n%s", filePath, content))
+		loadedFiles++
+	}
+
+	if loadedFiles > 0 {
+		// 移除原文中的 @filepath，追加文件内容
+		cleaned := re.ReplaceAllString(text, "`$1`")
+		return cleaned + fileContents.String()
+	}
+	return text
 }
 
 // clipboardCopy 跨平台复制到剪贴板
