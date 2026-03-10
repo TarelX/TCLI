@@ -120,24 +120,41 @@ func (m Model) renderMessages() string {
 		return sb.String()
 	}
 
+	// 消息内容宽度（留出左右边距）
+	contentW := m.width - 4
+	if contentW < 20 {
+		contentW = 20
+	}
+
 	for _, msg := range m.messages {
 		switch msg.Role {
 		case ai.RoleSystem:
 			continue
 		case ai.RoleUser:
-			sb.WriteString(m.theme.UserMessage.Render("[你] "))
-			sb.WriteString(msg.Content)
+			// 用户消息：带背景色的标签行
+			label := m.theme.UserMessage.Render("❯ ")
+			content := lipgloss.NewStyle().Width(contentW).Render(msg.Content)
+			sb.WriteString(label + content)
 		case ai.RoleAssistant:
-			sb.WriteString(m.theme.AIMessage.Render("[AI] "))
-			sb.WriteString(msg.Content)
+			// AI 消息：自动换行
+			label := m.theme.AIMessage.Render("● ")
+			content := lipgloss.NewStyle().Width(contentW).Render(msg.Content)
+			sb.WriteString(label + content)
 		}
 		sb.WriteString("\n\n")
 	}
-	// 流式响应中的临时内容
-	if m.streaming && m.streamBuf.Len() > 0 {
-		sb.WriteString(m.theme.AIMessage.Render("[AI] "))
-		sb.WriteString(m.streamBuf.String())
-		sb.WriteString(m.spinner.View())
+	// 流式响应中的临时内容 或 思考中动画
+	if m.streaming {
+		if m.streamBuf.Len() > 0 {
+			label := m.theme.AIMessage.Render("● ")
+			content := lipgloss.NewStyle().Width(contentW).Render(m.streamBuf.String())
+			sb.WriteString(label + content)
+			sb.WriteString(m.spinner.View())
+		} else {
+			// 还没收到任何内容，显示思考中动画
+			thinking := m.theme.TokenWarning.Render("✦ Thinking...")
+			sb.WriteString(thinking + " " + m.spinner.View())
+		}
 	}
 	return sb.String()
 }
